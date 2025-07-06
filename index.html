@@ -1,1 +1,149 @@
- 
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Responsive Header, Hero & Product Grid</title>
+  <link rel="stylesheet" href="styles/main.css">
+  <script src="https://kit.fontawesome.com/a076d05399.js" crossorigin="anonymous"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+</head>
+<body>
+
+<header class="header">
+  <div class="logo">MyShop</div>
+
+  <nav class="nav-links">
+    <a href="index.html">Home</a>
+    <a href="#">Products</a>
+    <a href="#">About</a>
+    <a href="cart.html">Cart (<span class="cart-count">0</span>)</a>
+    <a href="login.html" id="loginLink">Login</a>
+    <a href="#" id="logoutLink" style="display:none">Logout</a>
+  </nav>
+
+  <div class="header-right">
+    <input type="text" placeholder="Search products..." class="search-bar">
+
+    <div class="cart">
+      <i class="fas fa-shopping-cart"></i>
+      <span class="cart-count">0</span>
+    </div>
+
+    <div class="hamburger" id="hamburger">
+      <i class="fas fa-bars"></i>
+    </div>
+  </div>
+</header>
+
+<section class="hero">
+  <div class="hero-content">
+    <h1>Biggest Sale of the Year!</h1>
+    <p>Discover amazing deals on all our latest products.</p>
+    <a href="#" class="cta-button">Shop Now</a>
+  </div>
+</section>
+
+<section class="product-grid" id="productGrid">
+  <!-- Product cards will be dynamically inserted here -->
+</section>
+
+<script>
+const firebaseConfig = {
+  apiKey: "YOUR_API_KEY",
+  authDomain: "YOUR_AUTH_DOMAIN",
+  projectId: "YOUR_PROJECT_ID",
+  storageBucket: "YOUR_STORAGE_BUCKET",
+  messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
+  appId: "YOUR_APP_ID"
+};
+
+firebase.initializeApp(firebaseConfig);
+const auth = firebase.auth();
+
+const hamburger = document.getElementById('hamburger');
+const navLinks = document.querySelector('.nav-links');
+const productGrid = document.getElementById('productGrid');
+const cartCountEls = document.querySelectorAll('.cart-count');
+const loginLink = document.getElementById('loginLink');
+const logoutLink = document.getElementById('logoutLink');
+
+function updateCartCount() {
+  const cart = JSON.parse(localStorage.getItem('cart')) || [];
+  const totalCount = cart.reduce((sum, item) => sum + item.quantity, 0);
+  cartCountEls.forEach(el => el.textContent = totalCount);
+}
+
+hamburger.addEventListener('click', () => {
+  navLinks.classList.toggle('active');
+});
+
+fetch('https://fakestoreapi.com/products')
+  .then(res => res.json())
+  .then(data => {
+    data.forEach(product => {
+      const productCard = document.createElement('div');
+      productCard.classList.add('product-card');
+
+      productCard.innerHTML = `
+        <img src="${product.image}" alt="${product.title}">
+        <h3>${product.title}</h3>
+        <p>$${product.price}</p>
+        <button class="add-to-cart-btn">Add to Cart</button>
+      `;
+
+      productCard.querySelector('img, h3, p').addEventListener('click', () => {
+        window.location.href = `product.html?id=${product.id}`;
+      });
+
+      productCard.querySelector('.add-to-cart-btn').addEventListener('click', (e) => {
+        e.stopPropagation();
+        const cart = JSON.parse(localStorage.getItem('cart')) || [];
+        const existingProduct = cart.find(item => item.id === product.id);
+
+        if (existingProduct) {
+          existingProduct.quantity += 1;
+        } else {
+          cart.push({
+            id: product.id,
+            title: product.title,
+            price: product.price,
+            quantity: 1,
+            image: product.image
+          });
+        }
+
+        localStorage.setItem('cart', JSON.stringify(cart));
+        updateCartCount();
+        alert('Item added to cart!');
+      });
+
+      productGrid.appendChild(productCard);
+    });
+  })
+  .catch(err => {
+    productGrid.innerHTML = '<p style="text-align:center">Failed to load products.</p>';
+  });
+
+updateCartCount();
+
+// Firebase Auth State Management
+auth.onAuthStateChanged(user => {
+  if (user) {
+    loginLink.style.display = 'none';
+    logoutLink.style.display = 'inline';
+  } else {
+    loginLink.style.display = 'inline';
+    logoutLink.style.display = 'none';
+  }
+});
+
+logoutLink.addEventListener('click', () => {
+  auth.signOut().then(() => {
+    alert('Logged out successfully');
+  });
+});
+</script>
+</body>
+</html>
